@@ -1,0 +1,29 @@
+{
+  "name": "temple-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fillip-technologies/Shree_Gaurishankar_Temple_Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/fillip-technologies/Shree_Gaurishankar_Temple_Backend/issues"
+  },
+  "homepage": "https://github.com/fillip-technologies/Shree_Gaurishankar_Temple_Backend#readme",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.8.0"
+  }
+}
