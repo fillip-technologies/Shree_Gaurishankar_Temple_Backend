@@ -14,3 +14,18 @@ export const loginService = async ({ email, password }) => {
 
   return user;
 };
+
+export const updatePasswordService = async (current_password, newpassword, decodedToken) => {
+  const user = await Admin.findById(decodedToken._id).select("+password");
+
+  if(!user) throw new ApiError(HTTP_STATUS.NOT_FOUND, "User doesn't exist");
+
+  const isPasswordCorrect = await user.comparePassword(current_password);
+
+  if(!isPasswordCorrect) throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid password");
+
+  user.password = newpassword;
+  await  user.save({validateBeforeSave: true})
+  return user
+
+}

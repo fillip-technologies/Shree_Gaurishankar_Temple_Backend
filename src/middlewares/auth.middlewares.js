@@ -1,7 +1,7 @@
-import { envConfig } from "../config/env.config";
-import { HTTP_STATUS } from "../constants/httpStatus.constants";
-import { Admin } from "../models/auth.model";
-import ApiError from "../utils/ApiError";
+import { envConfig } from "../config/env.config.js";
+import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
+import { Admin } from "../models/auth.model.js";
+import ApiError from "../utils/ApiError.js";
 import jwt from 'jsonwebtoken'
 
 export const verifyJWT = async (req, res, next) => {

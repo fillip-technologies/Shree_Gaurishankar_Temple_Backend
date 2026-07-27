@@ -3,8 +3,8 @@ import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
 import ApiError from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { loginService } from "../services/auth.services.js";
-import ApiResponse from "../utils/ApiResponse.js"
-
+import ApiResponse from "../utils/ApiResponse.js";
+import { updatePasswordService } from "../services/auth.services.js";
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -22,7 +22,7 @@ export const login = asyncHandler(async (req, res) => {
   delete userData.password;
 
   const token = user.generateAccessToken();
-  console.log(userData)
+  console.log(userData);
   res
     .status(HTTP_STATUS.OK)
     .cookie("token", token, httpOptions)
@@ -34,5 +34,29 @@ export const login = asyncHandler(async (req, res) => {
         },
         "Login successful",
       ),
+    );
+});
+
+export const updatePassword = asyncHandler(async (req, res) => {
+  const decoded = req.user;
+  const { current_password, newpassword } = req.body;
+
+  if (
+    [current_password, newpassword].some(
+      (field) => !field || field.trim() === "",
     )
+  )
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, "Please enter all the fields");
+
+  const user = await updatePasswordService(
+    current_password,
+    newpassword,
+    decoded,
+  );
+
+  const userData = user.toObject();
+  delete userData.password;
+  res
+    .status(HTTP_STATUS.OK)
+    .json(new ApiResponse(HTTP_STATUS.OK, "Password succesfully changed"));
 });
