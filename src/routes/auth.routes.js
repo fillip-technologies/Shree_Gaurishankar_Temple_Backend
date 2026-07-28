@@ -1,10 +1,17 @@
-import express from 'express'
-import { login, updatePassword } from '../controllers/auth.controllers.js';
-import { verifyJWT } from '../middlewares/auth.middlewares.js';
+import express from "express";
+import {
+  createAdmin,
+  login,
+  removeAdmin,
+  updatePassword,
+} from "../controllers/auth.controllers.js";
+import { verifyJWT } from "../middlewares/auth.middlewares.js";
 
 const authRouter = express.Router();
 
-authRouter.post('/login', login);
+authRouter.post("/login", login);
+authRouter.post("/create_admin", verifyJWT, createAdmin);
+authRouter.post("/remove_admin", verifyJWT, removeAdmin);
 authRouter.patch("/update_password", verifyJWT, updatePassword);
 
-export {authRouter}
+export { authRouter };

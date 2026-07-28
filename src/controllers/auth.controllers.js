@@ -2,9 +2,14 @@ import { httpOptions } from "../constants/httpOptions.constants.js";
 import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
 import ApiError from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { loginService } from "../services/auth.services.js";
+import {
+  createAdminService,
+  loginService,
+  removeAdminService,
+} from "../services/auth.services.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { updatePasswordService } from "../services/auth.services.js";
+import { Admin } from "../models/auth.model.js";
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -22,7 +27,6 @@ export const login = asyncHandler(async (req, res) => {
   delete userData.password;
 
   const token = user.generateAccessToken();
-  console.log(userData);
   res
     .status(HTTP_STATUS.OK)
     .cookie("token", token, httpOptions)
@@ -59,4 +63,53 @@ export const updatePassword = asyncHandler(async (req, res) => {
   res
     .status(HTTP_STATUS.OK)
     .json(new ApiResponse(HTTP_STATUS.OK, "Password succesfully changed"));
+});
+
+export const createAdmin = asyncHandler(async (req, res) => {
+  const role = req.user.role;
+
+  if (role !== "superadmin")
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, "Request forbidden");
+  const { fullname, mobile_number, email, password } = req.body;
+
+  if (
+    [fullname, mobile_number, email, password].some(
+      (field) => field.trim() === "",
+    )
+  )
+    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "All fields are required");
+
+  const user = await createAdminService({
+    fullname,
+    mobile_number,
+    email,
+    password,
+  });
+
+  if (!user) throw new ApiError(HTTP_STATUS.CONFLICT, "Problem creating user");
+
+  res
+    .status(HTTP_STATUS.OK)
+    .json(new ApiResponse(HTTP_STATUS.OK, "User created Succesfully"));
+});
+
+export const removeAdmin = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  if (user.role !== "superadmin") {
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, "Request forbidden");
+  }
+
+  const { adminEmail, superAdminPassword } = req.body;
+
+  await removeAdminService({
+    adminEmail,
+    superAdminPassword,
+    superAdminId: user._id,
+  });
+
+  return res.status(HTTP_STATUS.OK).json({
+    success: true,
+    message: "Admin deleted successfully",
+  });
 });
