@@ -11,6 +11,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import { updatePasswordService } from "../services/auth.services.js";
 import { Admin } from "../models/auth.model.js";
 
+// ################     Login     #############
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -41,6 +42,7 @@ export const login = asyncHandler(async (req, res) => {
     );
 });
 
+// ##############   Update Password        ###############
 export const updatePassword = asyncHandler(async (req, res) => {
   const decoded = req.user;
   const { current_password, newpassword } = req.body;
@@ -65,6 +67,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(HTTP_STATUS.OK, "Password succesfully changed"));
 });
 
+// ##############       Create Admin         #############
 export const createAdmin = asyncHandler(async (req, res) => {
   const role = req.user.role;
 
@@ -88,11 +91,12 @@ export const createAdmin = asyncHandler(async (req, res) => {
 
   if (!user) throw new ApiError(HTTP_STATUS.CONFLICT, "Problem creating user");
 
-  res
+  return res
     .status(HTTP_STATUS.OK)
     .json(new ApiResponse(HTTP_STATUS.OK, "User created Succesfully"));
 });
 
+//  ################   Remove Admin      #############
 export const removeAdmin = asyncHandler(async (req, res) => {
   const user = req.user;
 
@@ -112,4 +116,19 @@ export const removeAdmin = asyncHandler(async (req, res) => {
     success: true,
     message: "Admin deleted successfully",
   });
+});
+
+export const listAdmin = asyncHandler(async (req, res) => {
+  const role = req.user.role;
+
+  if (role !== "superadmin")
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, "Request Forbidden");
+
+  const admins = await Admin.find().lean();
+  const message =
+    admins.length > 0 ? "Admins fetched successfully." : "No admins found.";
+
+  return res
+    .status(HTTP_STATUS.OK)
+    .json(new ApiResponse(HTTP_STATUS.OK, admins, message));
 });
