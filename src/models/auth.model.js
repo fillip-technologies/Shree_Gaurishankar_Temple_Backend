@@ -63,6 +63,11 @@ const adminSchema = new mongoose.Schema(
       unique: true,
       minlength: [6, "Password must be atleast 6 characters long"],
     },
+    refreshToken: {
+      type: String,
+      select: false,
+      trim: true,
+    },
     loginOtp: {
       type: String,
       trim: true,
@@ -71,7 +76,6 @@ const adminSchema = new mongoose.Schema(
     otpExpiry: {
       type: Date,
     },
-    
   },
   { timestamps: true },
 );
@@ -96,6 +100,14 @@ adminSchema.methods.generateAccessToken = function () {
     {
       expiresIn: envConfig.ACCESS_TOKEN_EXPIRES_IN,
     },
+  );
+};
+
+adminSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    { _id: this._id, email: this.email },
+    envConfig.REFRESH_TOKEN_SECRET,
+    { expiresIn: envConfig.REFRESH_TOKEN_EXPIRES_IN },
   );
 };
 

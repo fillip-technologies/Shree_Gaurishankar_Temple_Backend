@@ -10,6 +10,7 @@ import {
 import ApiResponse from "../utils/ApiResponse.js";
 import { updatePasswordService } from "../services/auth.service.js";
 import { Admin } from "../models/auth.model.js";
+import { envConfig } from "../config/env.config.js";
 
 // ################     Login     #############
 export const login = asyncHandler(async (req, res) => {
@@ -27,10 +28,12 @@ export const login = asyncHandler(async (req, res) => {
   const userData = user.toObject();
   delete userData.password;
 
-  const token = user.generateAccessToken();
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
   res
     .status(HTTP_STATUS.OK)
-    .cookie("token", token, httpOptions)
+    .cookie("accessToken", accessToken, httpOptions)
+    .cookie("refreshToken", refreshToken, httpOptions)
     .json(
       new ApiResponse(
         HTTP_STATUS.OK,
@@ -125,11 +128,40 @@ export const listAdmin = asyncHandler(async (req, res) => {
   if (role !== "superadmin")
     throw new ApiError(HTTP_STATUS.FORBIDDEN, "Request Forbidden");
 
-  const admins = await Admin.find().lean();
+  const admins = await Admin.find({role: "admin"}).lean();
   const message =
     admins.length > 0 ? "Admins fetched successfully." : "No admins found.";
 
   return res
     .status(HTTP_STATUS.OK)
     .json(new ApiResponse(HTTP_STATUS.OK, admins, message));
+});
+
+export const renewRefreshToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookie?.refreshToken;
+  if (!incomingRefreshToken)
+    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Not Authorized");
+
+  const decoded = jwt.verify(
+    incomingRefreshToken,
+    envConfig.REFRESH_TOKEN_SECRET,
+  );
+
+  const admin = await Admin.findById(decoded._id).select("+refreshToken");
+
+  if (!admin) throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Not Authorized");
+
+  if (admin.refreshToken !== incomingRefreshToken)
+    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Login session Expired");
+
+  const accessToken = admin.generateAccessToken();
+  const refreshToken = admin.generateRefreshToken();
+
+  admin.refreshToken = refreshToken;
+  await admin.save({ validateBeforeSave: false });
+
+  res
+    .cookie("accessToken", accessToken, httpOptions)
+    .cookie("refreshToken", refreshToken, httpOptions)
+    .json(new ApiResponse(HTTP_STATUS.OK, "Refresh token updated"));
 });
