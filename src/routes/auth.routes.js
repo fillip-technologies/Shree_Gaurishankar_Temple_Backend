@@ -1,4 +1,6 @@
 import express from "express";
+const authRouter = express.Router();
+
 import {
   createAdmin,
   listAdmin,
@@ -6,9 +8,7 @@ import {
   removeAdmin,
   updatePassword,
 } from "../controllers/auth.controllers.js";
-import { verifyJWT } from "../middlewares/auth.middlewares.js";
-
-const authRouter = express.Router();
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 authRouter.post("/login", login);
 authRouter.post("/create_admin", verifyJWT, createAdmin);

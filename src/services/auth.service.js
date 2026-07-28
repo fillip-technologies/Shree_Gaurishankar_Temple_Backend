@@ -12,15 +12,16 @@ export const loginService = async ({ email, password }) => {
 
   if (!isPasswordCorrect)
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid email or password");
+
   return user;
 };
 
 export const updatePasswordService = async ({
   current_password,
   newpassword,
-  decodedToken,
+  decoded,
 }) => {
-  const user = await Admin.findById(decodedToken._id).select("+password");
+  const user = await Admin.findById(decoded?._id).select("+password");
 
   if (!user) throw new ApiError(HTTP_STATUS.NOT_FOUND, "User doesn't exist");
 

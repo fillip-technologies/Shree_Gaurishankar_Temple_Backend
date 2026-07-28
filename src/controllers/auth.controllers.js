@@ -6,9 +6,9 @@ import {
   createAdminService,
   loginService,
   removeAdminService,
-} from "../services/auth.services.js";
+} from "../services/auth.service.js";
 import ApiResponse from "../utils/ApiResponse.js";
-import { updatePasswordService } from "../services/auth.services.js";
+import { updatePasswordService } from "../services/auth.service.js";
 import { Admin } from "../models/auth.model.js";
 
 // ################     Login     #############
@@ -45,6 +45,7 @@ export const login = asyncHandler(async (req, res) => {
 // ##############   Update Password        ###############
 export const updatePassword = asyncHandler(async (req, res) => {
   const decoded = req.user;
+
   const { current_password, newpassword } = req.body;
 
   if (
@@ -54,11 +55,11 @@ export const updatePassword = asyncHandler(async (req, res) => {
   )
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, "Please enter all the fields");
 
-  const user = await updatePasswordService(
+  const user = await updatePasswordService({
     current_password,
     newpassword,
     decoded,
-  );
+  });
 
   const userData = user.toObject();
   delete userData.password;

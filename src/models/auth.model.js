@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { envConfig } from "../config/env.config.js";
 import jwt from "jsonwebtoken";
-import bcrypt from 'bcrypt'
+import bcrypt from "bcrypt";
 
 const adminSchema = new mongoose.Schema(
   {
@@ -63,6 +63,15 @@ const adminSchema = new mongoose.Schema(
       unique: true,
       minlength: [6, "Password must be atleast 6 characters long"],
     },
+    loginOtp: {
+      type: String,
+      trim: true,
+      select: false,
+    },
+    otpExpiry: {
+      type: Date,
+    },
+    
   },
   { timestamps: true },
 );
@@ -71,11 +80,14 @@ adminSchema.pre("save", async function () {
   if (!this.isModified("password")) {
     return;
   }
-  this.password = await bcrypt.hash(this.password, Number(envConfig.SALT_ROUND));
+  this.password = await bcrypt.hash(
+    this.password,
+    Number(envConfig.SALT_ROUND),
+  );
 });
 
 adminSchema.methods.comparePassword = function (password) {
-  return  bcrypt.compare(password, this.password);
+  return bcrypt.compare(password, this.password);
 };
 adminSchema.methods.generateAccessToken = function () {
   return jwt.sign(
