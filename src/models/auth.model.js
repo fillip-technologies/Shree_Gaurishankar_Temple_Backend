@@ -63,6 +63,11 @@ const adminSchema = new mongoose.Schema(
       unique: true,
       minlength: [6, "Password must be atleast 6 characters long"],
     },
+    sessionId: {
+      type: String,
+      default: null,
+      select: false,
+    },
     refreshToken: {
       type: String,
       select: false,
@@ -95,7 +100,7 @@ adminSchema.methods.comparePassword = function (password) {
 };
 adminSchema.methods.generateAccessToken = function () {
   return jwt.sign(
-    { _id: this._id, email: this.email, role: this.role },
+    { _id: this._id, email: this.email, role: this.role , sessionId: this.sessionId},
     envConfig.ACCESS_TOKEN_SECRET,
     {
       expiresIn: envConfig.ACCESS_TOKEN_EXPIRES_IN,

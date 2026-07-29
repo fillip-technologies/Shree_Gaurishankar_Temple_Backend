@@ -1,8 +1,10 @@
+import { IncomingMessage } from "http";
 import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
 import { Admin } from "../models/auth.model.js";
 import ApiError from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 export const loginService = async ({ email, password }) => {
   const user = await Admin.findOne({ email }).select("+password");
@@ -13,7 +15,15 @@ export const loginService = async ({ email, password }) => {
   if (!isPasswordCorrect)
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid email or password");
 
-  return user;
+  user.sessionId = crypto.randomUUID();
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+  await user.save({ validateBeforeSave: false });
+  return {
+    user,
+    accessToken,
+    refreshToken,
+  };
 };
 
 export const updatePasswordService = async ({
@@ -98,4 +108,33 @@ export const removeAdminService = async ({
   await targetAdmin.deleteOne();
 
   return true;
+};
+
+export const refreshTokenService = async (inComingRefreshToken) => {
+  
+    if (!inComingRefreshToken)
+      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Not Authorized");
+
+    const decoded = jwt.verify(
+      inComingRefreshToken,
+      envConfig.REFRESH_TOKEN_SECRET,
+    );
+
+    const admin = await Admin.findById(decoded._id).select("+refreshToken");
+
+    if (!admin) throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Not Authorized");
+
+    if (admin.refreshToken !== inComingRefreshToken)
+      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Login session Expired");
+
+    const accessToken = admin.generateAccessToken();
+    const refreshToken = admin.generateRefreshToken();
+
+    admin.refreshToken = refreshToken;
+    await admin.save({ validateBeforeSave: false });
+    return {
+      accessToken,
+      refreshToken,
+    };
+  
 };
