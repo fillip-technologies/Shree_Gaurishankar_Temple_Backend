@@ -3,7 +3,7 @@ import { cloudinary } from "../config/cloudinary.config.js";
 import streamifier from "streamifier";
 
 export const uploadToCloudinary = (buffer, folder = "uploads") => {
-  return Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
