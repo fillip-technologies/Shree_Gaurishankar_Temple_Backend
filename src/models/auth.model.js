@@ -68,6 +68,18 @@ const adminSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    trustedDevices: {
+      type: [
+        {
+          deviceHash: { type: String, required: true },
+          userAgent: { type: String },
+          ip: { type: String },
+          lastUsedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+      select: false,
+    },
     refreshToken: {
       type: String,
       select: false,

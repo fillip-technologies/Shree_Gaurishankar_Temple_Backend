@@ -1,3 +1,5 @@
 /node_modules
 /.env
 /src/seeder
+/API_DOCUMENTATION.docx
+/API_DOCUMENTATION.md

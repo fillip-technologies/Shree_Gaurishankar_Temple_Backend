@@ -1,13 +1,46 @@
-import { IncomingMessage } from "http";
 import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
 import { Admin } from "../models/auth.model.js";
 import ApiError from "../utils/ApiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { envConfig } from "../config/env.config.js";
+import { generateAndSendOtp } from "./mail.service.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
-export const loginService = async ({ email, password }) => {
-  const user = await Admin.findOne({ email }).select("+password");
+const hashValue = (value) =>
+  crypto.createHash("sha256").update(String(value)).digest("hex");
+
+
+const issueSession = async (user, { deviceHash, userAgent, ip }) => {
+  user.sessionId = crypto.randomUUID();
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+  user.refreshToken = refreshToken;
+
+  if (deviceHash) {
+    const existing = user.trustedDevices.find(
+      (d) => d.deviceHash === deviceHash,
+    );
+    if (existing) {
+      existing.lastUsedAt = new Date();
+    } else {
+      user.trustedDevices.push({
+        deviceHash,
+        userAgent,
+        ip,
+        lastUsedAt: new Date(),
+      });
+    }
+  }
+
+  await user.save({ validateBeforeSave: false });
+  return { user, accessToken, refreshToken };
+};
+
+export const loginService = async ({ email, password, deviceId, userAgent, ip }) => {
+  const user = await Admin.findOne({ email }).select(
+    "+password +trustedDevices",
+  );
   if (!user)
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid email or password");
   const isPasswordCorrect = await user.comparePassword(password);
@@ -15,15 +48,91 @@ export const loginService = async ({ email, password }) => {
   if (!isPasswordCorrect)
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid email or password");
 
-  user.sessionId = crypto.randomUUID();
-  const accessToken = user.generateAccessToken();
-  const refreshToken = user.generateRefreshToken();
-  await user.save({ validateBeforeSave: false });
-  return {
-    user,
-    accessToken,
-    refreshToken,
-  };
+  const deviceHash = deviceId ? hashValue(deviceId) : null;
+  const isTrustedDevice =
+    deviceHash && user.trustedDevices.some((d) => d.deviceHash === deviceHash);
+
+  // New / unrecognized device → require email OTP before issuing any session.
+  if (!isTrustedDevice) {
+    await generateAndSendOtp(user);
+
+    // Short-lived token proving the password was already verified; the OTP
+    // step is bound to this so an attacker can't complete login with the OTP alone.
+    const challengeToken = jwt.sign(
+      { _id: user._id, purpose: "login_otp" },
+      envConfig.ACCESS_TOKEN_SECRET,
+      { expiresIn: "10m" },
+    );
+
+    return { requiresOtp: true, email: user.email, challengeToken };
+  }
+
+  // Trusted device → normal login.
+  const session = await issueSession(user, { deviceHash, userAgent, ip });
+  return { requiresOtp: false, deviceId, ...session };
+};
+
+// Completes a new-device login: validates the challenge + OTP, then trusts the
+// device and issues the session.
+export const verifyLoginOtpService = async ({
+  challengeToken,
+  otp,
+  deviceId,
+  userAgent,
+  ip,
+}) => {
+  if (!challengeToken)
+    throw new ApiError(
+      HTTP_STATUS.UNAUTHORIZED,
+      "Login session expired. Please login again.",
+    );
+
+  let decoded;
+  try {
+    decoded = jwt.verify(challengeToken, envConfig.ACCESS_TOKEN_SECRET);
+  } catch (error) {
+    throw new ApiError(
+      HTTP_STATUS.UNAUTHORIZED,
+      "Login session expired. Please login again.",
+    );
+  }
+
+  if (decoded.purpose !== "login_otp")
+    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid request");
+
+  const user = await Admin.findById(decoded._id).select(
+    "+loginOtp +trustedDevices",
+  );
+  if (!user) throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Not authorized");
+
+  if (!user.loginOtp || !user.otpExpiry)
+    throw new ApiError(
+      HTTP_STATUS.BAD_REQUEST,
+      "No OTP request found. Please login again.",
+    );
+
+  if (user.otpExpiry.getTime() < Date.now()) {
+    user.loginOtp = undefined;
+    user.otpExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
+    throw new ApiError(
+      HTTP_STATUS.BAD_REQUEST,
+      "OTP has expired. Please login again.",
+    );
+  }
+
+  if (hashValue(otp) !== user.loginOtp)
+    throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Invalid OTP");
+
+  // OTP correct → clear it and trust this device.
+  user.loginOtp = undefined;
+  user.otpExpiry = undefined;
+
+  const newDeviceId = deviceId || crypto.randomUUID();
+  const deviceHash = hashValue(newDeviceId);
+
+  const session = await issueSession(user, { deviceHash, userAgent, ip });
+  return { ...session, deviceId: newDeviceId };
 };
 
 export const updatePasswordService = async ({

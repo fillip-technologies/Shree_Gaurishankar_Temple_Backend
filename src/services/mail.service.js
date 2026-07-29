@@ -3,7 +3,6 @@ import crypto from "crypto";
 import { transporter } from "../config/mail.config.js";
 import { envConfig } from "../config/env.config.js";
 import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
-import { Admin } from "../models/auth.model.js";
 import { otpTemplate } from "../templates/otp.template.js";
 import ApiError from "../utils/ApiError.js";
 import { generateOTP } from "../utils/generateOTP.js";
@@ -17,19 +16,15 @@ const sendOtpMail = async ({ name, email, otp }) => {
   });
 };
 
-export const sendOtpService = async ({ email }) => {
-  const admin = await Admin.findOne({ email });
-
-  if (!admin) {
-    throw new ApiError(HTTP_STATUS.NOT_FOUND, "Admin doesn't exist");
-  }
-
+// Generates an OTP, stores its hash + expiry on the given admin document, and
+// emails the plaintext OTP. Reused by the OTP request and new-device login flows.
+export const generateAndSendOtp = async (admin) => {
   const otp = generateOTP();
 
   const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
   admin.loginOtp = hashedOtp;
-  admin.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+  admin.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
   await admin.save({ validateBeforeSave: false });
 
