@@ -17,3 +17,16 @@ export const uploadToCloudinary = (buffer, folder = "uploads") => {
     streamifier.createReadStream(buffer).pipe(stream);
   });
 };
+
+export const deleteFromCloudinary = async (publicId) => {
+  if (!publicId) return;
+
+  const result = await cloudinary.uploader.destroy(publicId);
+
+  if (result.result !== "ok" && result.result !== "not found") {
+    throw new Error(`Failed to delete asset: ${publicId}`);
+  }
+
+  return result;
+  
+};

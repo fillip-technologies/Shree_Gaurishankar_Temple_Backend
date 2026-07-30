@@ -25,6 +25,10 @@ const contentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    folder:{
+      type: String,
+      enum : ["gallery", "shringar"],
+    },
   },
   { timestamps: true },
 );
