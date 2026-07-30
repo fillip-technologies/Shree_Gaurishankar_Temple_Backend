@@ -167,7 +167,12 @@ export const createAdmin = asyncHandler(async (req, res) => {
 
   return res
     .status(HTTP_STATUS.OK)
-    .json(new ApiResponse(HTTP_STATUS.OK, "User created Succesfully"));
+    .json(
+      new ApiResponse(
+        HTTP_STATUS.OK,
+        "Admin created successfully. Login credentials have been emailed.",
+      ),
+    );
 });
 
 //  ################   Remove Admin      #############

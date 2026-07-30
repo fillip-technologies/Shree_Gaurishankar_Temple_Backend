@@ -88,7 +88,7 @@ export const galleryUpload = asyncHandler(async (req, res) => {
 });
 
 export const fetchShringar = asyncHandler(async (req, res) => {
-  const shringar = await Content.find({folder: shringar}).lean();
+  const shringar = await Content.find({ folder: "shringar" }).lean();
   if(!shringar) throw new ApiError(HTTP_STATUS.NO_CONTENT, "No shringar exists");
 
   res.status(HTTP_STATUS.OK).json(new ApiResponse(HTTP_STATUS.NO_CONTENT, {data: shringar}, "shringar fetched succesfully"));

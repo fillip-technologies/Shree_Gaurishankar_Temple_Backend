@@ -20,11 +20,6 @@ app.use("/api/v1/data",uploadRouter)
 app.get('/', (req, res) => {
     res.status(200).json({msg: "Everthing is working fine"});
 })
-app.post("/test", (req, res) => {
-  console.log(req.headers);
-  req.on("data", chunk => console.log(chunk));
-  req.on("end", () => res.send("ok"));
-});
 
 // Global error handler — must be the LAST middleware registered
 app.use(errorHandler);

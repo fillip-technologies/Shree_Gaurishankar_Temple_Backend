@@ -22,7 +22,7 @@ uploadRouter.post("/gallery", verifyJWT, upload.single("file"), galleryUpload);
 
 uploadRouter.get("/shringar", fetchShringar);
 uploadRouter.get("/gallery", fetchGallery);
-uploadRouter.delete("/gallery:id", verifyJWT, deleteImageFromGallery);
+uploadRouter.delete("/gallery/:id", verifyJWT, deleteImageFromGallery);
 
 
 export { uploadRouter };

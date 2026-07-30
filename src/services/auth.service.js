@@ -2,7 +2,7 @@ import { HTTP_STATUS } from "../constants/httpStatus.constants.js";
 import { Admin } from "../models/auth.model.js";
 import ApiError from "../utils/ApiError.js";
 import { envConfig } from "../config/env.config.js";
-import { generateAndSendOtp } from "./mail.service.js";
+import { generateAndSendOtp, sendAdminCredentials } from "./mail.service.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
@@ -172,6 +172,23 @@ export const createAdminService = async ({
     email: email,
     password: password,
   });
+
+  // Email the new admin their credentials. If delivery fails, roll back the
+  // creation so the superadmin can retry cleanly (mirrors the OTP flow).
+  try {
+    await sendAdminCredentials({
+      name: user.fullname,
+      email: user.email,
+      password,
+    });
+  } catch (error) {
+    await user.deleteOne();
+    throw new ApiError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      "Admin was not created: unable to send the credentials email. Please try again.",
+    );
+  }
+
   return user;
 };
 
@@ -227,7 +244,9 @@ export const refreshTokenService = async (inComingRefreshToken) => {
       envConfig.REFRESH_TOKEN_SECRET,
     );
 
-    const admin = await Admin.findById(decoded._id).select("+refreshToken");
+    const admin = await Admin.findById(decoded._id).select(
+      "+refreshToken +sessionId",
+    );
 
     if (!admin) throw new ApiError(HTTP_STATUS.UNAUTHORIZED, "Not Authorized");
 
