@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const shringarSchema = new mongoose.Schema(
+const contentSchema = new mongoose.Schema(
   {
     admin: {
       type: mongoose.Schema.Types.ObjectId,
@@ -29,4 +29,4 @@ const shringarSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export const Shringar = mongoose.model("Shringar", shringarSchema);
+export const Content = mongoose.model("Content", contentSchema);

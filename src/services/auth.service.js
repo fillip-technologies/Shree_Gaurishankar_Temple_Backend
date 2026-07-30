@@ -10,7 +10,6 @@ import jwt from "jsonwebtoken";
 const hashValue = (value) =>
   crypto.createHash("sha256").update(String(value)).digest("hex");
 
-
 const issueSession = async (user, { deviceHash, userAgent, ip }) => {
   user.sessionId = crypto.randomUUID();
   const accessToken = user.generateAccessToken();
@@ -56,8 +55,7 @@ export const loginService = async ({ email, password, deviceId, userAgent, ip })
   if (!isTrustedDevice) {
     await generateAndSendOtp(user);
 
-    // Short-lived token proving the password was already verified; the OTP
-    // step is bound to this so an attacker can't complete login with the OTP alone.
+    
     const challengeToken = jwt.sign(
       { _id: user._id, purpose: "login_otp" },
       envConfig.ACCESS_TOKEN_SECRET,
